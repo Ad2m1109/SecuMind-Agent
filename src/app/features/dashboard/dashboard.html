@@ -1,0 +1,466 @@
+<div class="dashboard-container">
+  <!-- TOP NAV -->
+  <div class="nav-header">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <!-- Logo -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div
+          style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg,#a78bfa,#4ecdc4); display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 20px rgba(167,139,250,0.3)">
+          🛡</div>
+        <div>
+          <div style="font-size: 13px; font-weight: 900; letter-spacing: .8px; color: var(--text);">SENTINEL AI</div>
+          <div style="font-size: 9px; color: var(--muted); letter-spacing: 2px; font-family: var(--mono);">UNIFIED SOC
+            PLATFORM</div>
+        </div>
+      </div>
+      <div style="width: 1px; height: 28px; background: var(--border);"></div>
+      <!-- Source pills -->
+      <div style="display: flex; gap: 5px;">
+        <div *ngFor="let s of getSourcesArray()" [style.background]="s.color + '10'"
+          [style.border]="'1px solid ' + s.color + '25'"
+          style="display: flex; align-items: center; gap: 4px; border-radius: 99px; padding: 3px 9px;">
+          <span style="font-size: 11px;">{{s.icon}}</span>
+          <span [style.color]="s.color"
+            style="font-size: 9px; font-family: var(--mono); font-weight: 700;">{{s.label}}</span>
+        </div>
+      </div>
+      <div style="width: 1px; height: 28px; background: var(--border);"></div>
+      <!-- Tabs -->
+      <div class="nav-tabs">
+        <button *ngFor="let t of tabs" (click)="setPage(t)" class="nav-tab-btn"
+          [class.active]="activePage() === t">{{t}}</button>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div *ngIf="stats().critical > 0"
+        style="display: flex; align-items: center; gap: 6px; background: rgba(255,45,85,0.1); border: 1px solid rgba(255,45,85,0.3); border-radius: 6px; padding: 4px 12px;">
+        <div class="pulse-container">
+          <span [style.background]="C.critical" [style.boxShadow]="'0 0 6px ' + C.critical" class="pulse-dot"
+            style="width: 7px; height: 7px;"></span>
+          <span [style.background]="C.critical" class="pulse-ring" style="width: 7px; height: 7px;"></span>
+        </div>
+        <span [style.color]="C.critical"
+          style="font-size: 11px; font-weight: 800; font-family: var(--mono);">{{stats().critical}}
+          CRITIQUE{{stats().critical > 1 ? 'S' : ''}}</span>
+      </div>
+      <span style="font-size: 11px; color: var(--muted); font-family: var(--mono);">2025-03-03 · <span
+          [style.color]="C.low">{{liveTime()}}</span></span>
+      <div
+        style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#667eea,#764ba2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900;">
+        A</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <ng-container *ngIf="activePage() === 'Dashboard'">
+    <!-- Global KPIs -->
+    <div class="grid-kpis">
+      <div class="panel" [style.borderColor]="C.ai + '40'">
+        <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.ai + ',transparent)'"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 18px;">⚡</span>
+          <span style="font-size: 10px; font-family: var(--mono); font-weight: 700; color: var(--critical)">+14%</span>
+        </div>
+        <div [style.color]="C.ai" style="font-size: 28px; font-weight: 900; font-family: var(--mono);">{{stats().total}}
+        </div>
+        <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;">Total
+          Alertes</div>
+      </div>
+      <div class="panel" [style.borderColor]="C.low + '40'">
+        <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.low + ',transparent)'"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 18px;">✅</span>
+          <span style="font-size: 10px; font-family: var(--mono); font-weight: 700; color: var(--low)">-6%</span>
+        </div>
+        <div [style.color]="C.low" style="font-size: 28px; font-weight: 900; font-family: var(--mono);">
+          {{stats().resolved}}</div>
+        <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;">Résolues IA
+        </div>
+      </div>
+      <div class="panel" [style.borderColor]="C.critical + '40'">
+        <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.critical + ',transparent)'"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 18px;">🚫</span>
+          <span style="font-size: 10px; font-family: var(--mono); font-weight: 700; color: var(--critical)">+5%</span>
+        </div>
+        <div [style.color]="C.critical" style="font-size: 28px; font-weight: 900; font-family: var(--mono);">
+          {{stats().blocked}}</div>
+        <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;">IPs
+          Bloquées</div>
+      </div>
+      <div class="panel" [style.borderColor]="C.medium + '40'">
+        <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.medium + ',transparent)'"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 18px;">🩹</span>
+          <span style="font-size: 10px; font-family: var(--mono); font-weight: 700; color: var(--critical)">+3%</span>
+        </div>
+        <div [style.color]="C.medium" style="font-size: 28px; font-weight: 900; font-family: var(--mono);">
+          {{stats().patches}}</div>
+        <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;">Patches
+          Appliqués</div>
+      </div>
+      <div class="panel" [style.borderColor]="C.muted + '40'">
+        <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.muted + ',transparent)'"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 18px;">🖥</span>
+        </div>
+        <div [style.color]="C.text" style="font-size: 28px; font-weight: 900; font-family: var(--mono);">
+          {{stats().agents}}</div>
+        <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;">Agents
+          Actifs</div>
+      </div>
+      <div class="panel" [style.borderColor]="C.high + '40'">
+        <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.high + ',transparent)'"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 18px;">🔴</span>
+        </div>
+        <div [style.color]="C.high" style="font-size: 28px; font-weight: 900; font-family: var(--mono);">
+          {{stats().critical}}</div>
+        <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px;">Critiques
+        </div>
+      </div>
+    </div>
+
+    <!-- Source Cards -->
+    <div class="grid-sources">
+      <div *ngFor="let s of sourceStats()" class="panel" [style.borderColor]="s.src.color + '40'"
+        style="display: flex; gap: 14px; align-items: center;">
+        <div [style.background]="s.src.color + '15'" [style.border]="'1.5px solid ' + s.src.color + '40'"
+          style="width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+          {{s.src.icon}}
+        </div>
+        <div style="flex: 1;">
+          <div [style.color]="s.src.color" style="font-size: 13px; font-weight: 800;">{{s.src.label}}</div>
+          <div style="font-size: 10px; color: var(--muted); margin-bottom: 6px;">{{s.src.desc}}</div>
+          <div style="display: flex; gap: 8px;">
+            <span
+              style="font-family: var(--mono); font-size: 18px; font-weight: 900; color: var(--text);">{{s.count}}</span>
+            <span *ngIf="s.crit > 0"
+              style="background: rgba(255,45,85,0.12); color: var(--critical); border: 1px solid rgba(255,45,85,0.3); border-radius: 99px; padding: 1px 7px; font-size: 10px; font-weight: 800; align-self: center;">
+              {{s.crit}} crit
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-content">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Live Feed -->
+        <div class="panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 14px; font-weight: 800;">Flux Temps Réel — Toutes Sources</span>
+              <div
+                style="display: flex; align-items: center; gap: 5px; background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.2); border-radius: 99px; padding: 3px 10px;">
+                <div class="pulse-container">
+                  <span [style.background]="C.low" class="pulse-dot" style="width: 7px; height: 7px;"></span>
+                  <span [style.background]="C.low" class="pulse-ring" style="width: 7px; height: 7px;"></span>
+                </div>
+                <span style="font-size: 9px; color: var(--low); font-family: var(--mono); font-weight: 700;">LIVE</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto;">
+            <div *ngFor="let a of alerts().slice(0, 12)" (click)="selectAlert(a)" class="alert-row"
+              [class.selected]="selectedAlert()?.id === a.id" [class.is-new]="a.isNew"
+              [style.borderColor]="selectedAlert()?.id === a.id ? TL[a.level].c + '50' : 'var(--border)'">
+              <div class="pulse-container">
+                <span
+                  [style.background]="a.status === 'resolved' ? C.low : a.status === 'analyzing' ? C.medium : C.critical"
+                  class="pulse-dot" style="width: 8px; height: 8px;"></span>
+              </div>
+              <div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--text);">{{a.rule}}</div>
+                <div style="font-size: 10px; color: var(--muted); font-family: var(--mono);">🖥 {{a.agent}} · 🌐
+                  {{a.ip}}</div>
+              </div>
+              <span class="badge" [style.background]="SOURCES[a.source].color + '15'"
+                [style.color]="SOURCES[a.source].color" [style.border]="'1px solid ' + SOURCES[a.source].color + '30'">
+                {{SOURCES[a.source].icon}} {{SOURCES[a.source].label}}
+              </span>
+              <span class="badge" [style.background]="TL[a.level].bg" [style.color]="TL[a.level].c"
+                [style.border]="'1px solid ' + TL[a.level].c + '40'">
+                {{a.level}}
+              </span>
+              <span
+                style="font-size: 10px; color: var(--muted); font-family: var(--mono); white-space: nowrap;">{{a.time}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="panel">
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 3px;">Distribution Horaire</div>
+            <div style="font-size: 10px; color: var(--muted); margin-bottom: 14px; font-family: var(--mono);">Alertes
+              toutes sources · aujourd'hui</div>
+            <div class="chart-container">
+              <div *ngFor="let d of hourData" class="chart-bar-wrapper">
+                <div class="chart-bar-area">
+                  <div class="chart-bar" [style.height]="(d.v / maxHourValue * 100) + '%'"></div>
+                </div>
+                <span style="font-size: 8px; color: var(--muted); font-family: var(--mono);">{{d.l}}</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 3px;">Répartition par Source</div>
+            <div style="font-size: 10px; color: var(--muted); margin-bottom: 14px; font-family: var(--mono);">
+              Pourcentage du total alertes</div>
+            <div *ngFor="let s of sourceStats()" style="margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span [style.color]="s.src.color" style="font-size: 11px;">{{s.src.icon}} {{s.src.label}}</span>
+                <span [style.color]="s.src.color"
+                  style="font-size: 11px; font-family: var(--mono); font-weight: 800;">{{s.count}}</span>
+              </div>
+              <div class="mini-bar-bg" style="height: 4px;">
+                <div class="mini-bar-fill" [style.width]="(s.count / (stats().total || 1) * 100) + '%'"
+                  [style.background]="s.src.color"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Panel -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="panel" [style.borderColor]="C.ai + '60'" style="min-height: 340px;">
+          <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.ai + ',transparent)'"></div>
+          <div
+            style="font-size: 13px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 7px;">
+            <span [style.color]="C.ai">◈</span> Décision IA — {{selectedAlert() ? SOURCES[selectedAlert().source].label
+            : "—"}}
+          </div>
+          <div *ngIf="selectedAlert(); else noAlert" style="display: flex; flex-direction: column; gap: 11px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div
+                style="width: 34px; height: 34px; border-radius: 50%; background: rgba(167,139,250,.15); border: 1.5px solid #a78bfa; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                🤖</div>
+              <div>
+                <div [style.color]="C.ai"
+                  style="font-size: 10px; font-family: var(--mono); font-weight: 700; letter-spacing: 1px;">SENTINEL AI
+                  AGENT</div>
+                <div [style.color]="C.low" style="font-size: 9px; font-family: var(--mono);">✓ DÉCISION PRISE</div>
+              </div>
+            </div>
+            <div
+              style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+              <div style="font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 7px;">
+                {{selectedAlert().rule}}</div>
+              <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <span class="badge" [style.background]="SOURCES[selectedAlert().source].color + '15'"
+                  [style.color]="SOURCES[selectedAlert().source].color"
+                  [style.border]="'1px solid ' + SOURCES[selectedAlert().source].color + '30'">
+                  {{SOURCES[selectedAlert().source].icon}} {{SOURCES[selectedAlert().source].label}}
+                </span>
+                <span class="badge" [style.background]="TL[selectedAlert().level].bg"
+                  [style.color]="TL[selectedAlert().level].c"
+                  [style.border]="'1px solid ' + TL[selectedAlert().level].c + '40'">
+                  {{selectedAlert().level}}
+                </span>
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--muted); line-height: 1.7;">{{selectedAlert().desc}}</div>
+            <div
+              style="background: rgba(167,139,250,.06); border-radius: 8px; padding: 10px; border: 1px solid rgba(167,139,250,.15);">
+              <div [style.color]="C.ai"
+                style="font-size: 9px; margin-bottom: 6px; font-family: var(--mono); letter-spacing: 1px;">RAISONNEMENT
+                IA</div>
+              <div style="font-size: 10px; color: var(--muted); line-height: 1.8; font-family: var(--mono);">
+                › Source : <span
+                  [style.color]="SOURCES[selectedAlert().source].color">{{SOURCES[selectedAlert().source].label}}</span><br />
+                › Niveau : <span [style.color]="TL[selectedAlert().level].c">{{selectedAlert().level}}</span><br />
+                › Confiance : <span [style.color]="C.low">{{selectedAlert().confidence}}%</span><br />
+                › Règle : <span style="color: var(--text);">#{{selectedAlert().ruleId}}</span>
+              </div>
+            </div>
+            <div *ngIf="selectedAlert().action" [style.background]="ACTIONS[selectedAlert().action].color + '12'"
+              [style.borderColor]="ACTIONS[selectedAlert().action].color + '30'"
+              style="border-radius: 8px; padding: 10px; border: 1px solid;">
+              <div [style.color]="ACTIONS[selectedAlert().action].color"
+                style="font-size: 9px; margin-bottom: 5px; font-family: var(--mono); letter-spacing: 1px;">⚡ ACTION
+                AUTOMATIQUE</div>
+              <span class="tag" [style.background]="ACTIONS[selectedAlert().action].color + '12'"
+                [style.color]="ACTIONS[selectedAlert().action].color"
+                [style.border]="'1px solid ' + ACTIONS[selectedAlert().action].color + '25'">
+                {{ACTIONS[selectedAlert().action].icon}} {{ACTIONS[selectedAlert().action].label}}
+              </span>
+              <div style="margin-top: 8px;" class="mini-bar-bg">
+                <div class="mini-bar-fill" [style.width]="selectedAlert().confidence + '%'"
+                  [style.background]="ACTIONS[selectedAlert().action].color" style="height: 4px;"></div>
+              </div>
+              <div
+                style="font-size: 9px; color: var(--muted); margin-top: 3px; font-family: var(--mono); text-align: right;">
+                Confiance {{selectedAlert().confidence}}%</div>
+            </div>
+          </div>
+          <ng-template #noAlert>
+            <div style="text-align: center; opacity: .3; margin-top: 60px;">
+              🤖<br /><span style="font-size: 11px; font-family: var(--mono);">Sélectionner une alerte</span>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Agents quick view -->
+        <div class="panel">
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">Agents — État Rapide</div>
+          <div *ngFor="let a of agents().slice(0, 6)"
+            style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border);">
+            <div class="pulse-container">
+              <span [style.background]="a.status === 'online' ? C.low : a.status === 'warning' ? C.medium : C.critical"
+                class="pulse-dot" style="width: 8px; height: 8px;"></span>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 11px; font-weight: 700; color: var(--text);">{{a.name}}</div>
+              <div style="display: flex; gap: 4px; margin-top: 2px;">
+                <span *ngFor="let s of a.sources" [style.color]="SOURCES[s].color"
+                  style="font-size: 8px;">{{SOURCES[s].icon}}</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div [style.color]="a.threats > 0 ? C.critical : C.muted"
+                style="font-size: 10px; font-family: var(--mono); font-weight: 700;">{{a.threats}}⚠</div>
+              <div [style.color]="a.status === 'online' ? C.low : a.status === 'warning' ? C.medium : C.critical"
+                style="font-size: 9px; font-family: var(--mono); text-transform: uppercase;">{{a.status}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ALERTES PAGE -->
+  <ng-container *ngIf="activePage() === 'Alertes'">
+    <div style="padding: 18px 28px; display: flex; flex-direction: column; gap: 18px;">
+      <!-- Filters -->
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input class="inp" placeholder="🔍 Rechercher règle, IP, agent..." [ngModel]="alertSearch()"
+          (ngModelChange)="alertSearch.set($event)" style="flex: 1; min-width: 240px;">
+        <select class="sel" [ngModel]="filterSource()" (ngModelChange)="filterSource.set($event)">
+          <option value="ALL">Toutes sources</option>
+          <option *ngFor="let s of getSourcesArray()" [value]="s.id">{{s.icon}} {{s.label}}</option>
+        </select>
+        <select class="sel" [ngModel]="filterLevel()" (ngModelChange)="filterLevel.set($event)">
+          <option value="ALL">Tous niveaux</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+        <select class="sel" [ngModel]="filterStatus()" (ngModelChange)="filterStatus.set($event)">
+          <option value="ALL">Tous statuts</option>
+          <option value="resolved">Résolu</option>
+          <option value="analyzing">En analyse</option>
+          <option value="open">Ouvert</option>
+        </select>
+      </div>
+
+      <div class="panel">
+        <!-- Table Header -->
+        <div
+          style="display: grid; grid-template-columns: 20px 100px 1fr 130px 110px 110px 80px 100px; gap: 8px; padding: 5px 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px;">
+          <div *ngFor="let h of ['', 'Source', 'Règle / Agent', 'IP', 'Niveau', 'Action', 'Conf.', 'Heure']"
+            style="font-size: 9px; color: var(--muted); font-family: var(--mono); letter-spacing: 1.2px; text-transform: uppercase;">
+            {{h}}</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 3px; max-height: 520px; overflow-y: auto;">
+          <div *ngFor="let a of filteredAlerts()" class="alert-row"
+            style="grid-template-columns: 20px 100px 1fr 130px 110px 110px 80px 100px;">
+            <div class="pulse-container">
+              <span
+                [style.background]="a.status === 'resolved' ? C.low : a.status === 'analyzing' ? C.medium : C.critical"
+                class="pulse-dot" style="width: 8px; height: 8px;"></span>
+            </div>
+            <span class="badge" [style.background]="SOURCES[a.source].color + '15'"
+              [style.color]="SOURCES[a.source].color" [style.border]="'1px solid ' + SOURCES[a.source].color + '30'">
+              {{SOURCES[a.source].icon}} {{SOURCES[a.source].label}}
+            </span>
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: var(--text);">{{a.rule}}</div>
+              <div style="font-size: 10px; color: var(--muted); font-family: var(--mono);">{{a.agent}}</div>
+            </div>
+            <span style="font-size: 10px; font-family: var(--mono); color: var(--muted);">{{a.ip}}</span>
+            <span class="badge" [style.background]="TL[a.level].bg" [style.color]="TL[a.level].c"
+              [style.border]="'1px solid ' + TL[a.level].c + '40'">
+              {{a.level}}
+            </span>
+            <span *ngIf="a.action" class="tag" [style.background]="ACTIONS[a.action].color + '12'"
+              [style.color]="ACTIONS[a.action].color" [style.border]="'1px solid ' + ACTIONS[a.action].color + '25'">
+              {{ACTIONS[a.action].icon}} {{ACTIONS[a.action].label.split(' ')[0]}}
+            </span>
+            <span *ngIf="!a.action"></span>
+            <span [style.color]="a.confidence > 90 ? C.low : a.confidence > 75 ? C.medium : C.high"
+              style="font-size: 12px; font-family: var(--mono); font-weight: 800;">{{a.confidence}}%</span>
+            <span style="font-size: 10px; font-family: var(--mono); color: var(--muted);">{{a.time}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- AGENTS PAGE -->
+  <ng-container *ngIf="activePage() === 'Agents'">
+    <div style="padding: 18px 28px; display: flex; flex-direction: column; gap: 18px;">
+      <div class="agents-grid">
+        <div *ngFor="let a of agents()" class="panel agent-card"
+          [style.borderColor]="(a.status === 'online' ? C.low : a.status === 'warning' ? C.medium : C.critical) + '40'">
+          <div class="agent-card-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="pulse-container">
+                <span
+                  [style.background]="a.status === 'online' ? C.low : a.status === 'warning' ? C.medium : C.critical"
+                  class="pulse-dot" style="width: 8px; height: 8px;"></span>
+              </div>
+              <div>
+                <div style="font-size: 13px; font-weight: 800; color: var(--text);">{{a.name}}</div>
+                <div style="font-size: 9px; color: var(--muted); font-family: var(--mono);">{{a.id}}</div>
+              </div>
+            </div>
+            <span *ngIf="a.threats > 0"
+              style="background: rgba(255,45,85,.15); color: var(--critical); border: 1px solid rgba(255,45,85,.3); border-radius: 99px; padding: 2px 8px; font-size: 10px; font-weight: 800;">{{a.threats}}⚠</span>
+          </div>
+          <div
+            style="font-size: 10px; color: var(--muted); font-family: var(--mono); line-height: 1.8; margin-bottom: 10px;">
+            🌐 {{a.ip}} · 💻 {{a.os}}<br />⏱ Uptime: {{a.uptime}}
+          </div>
+          <div style="margin-bottom: 10px;">
+            <div
+              style="font-size: 9px; color: var(--muted); margin-bottom: 5px; letter-spacing: 1px; text-transform: uppercase;">
+              Superviseurs actifs</div>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+              <span *ngFor="let s of getSourcesArray()" [style.opacity]="a.sources.includes(s.id) ? 1 : 0.2"
+                [title]="s.label" style="font-size: 11px;">{{s.icon}}</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <div
+                style="display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 2px;">
+                <span>CPU</span><span [style.color]="a.cpu > 80 ? C.critical : a.cpu > 60 ? C.medium : C.low"
+                  style="font-family: var(--mono);">{{a.cpu}}%</span>
+              </div>
+              <div class="mini-bar-bg" style="height: 4px;">
+                <div class="mini-bar-fill" [style.width]="a.cpu + '%'"
+                  [style.background]="a.cpu > 80 ? C.critical : a.cpu > 60 ? C.medium : C.low"></div>
+              </div>
+            </div>
+            <div>
+              <div
+                style="display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 2px;">
+                <span>RAM</span><span [style.color]="a.mem > 80 ? C.critical : a.mem > 60 ? C.medium : C.low"
+                  style="font-family: var(--mono);">{{a.mem}}%</span>
+              </div>
+              <div class="mini-bar-bg" style="height: 4px;">
+                <div class="mini-bar-fill" [style.width]="a.mem + '%'"
+                  [style.background]="a.mem > 80 ? C.critical : a.mem > 60 ? C.medium : C.low"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
