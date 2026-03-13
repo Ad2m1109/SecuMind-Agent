@@ -46,6 +46,13 @@
       </div>
       <span style="font-size: 11px; color: var(--muted); font-family: var(--mono);">2025-03-03 · <span
           [style.color]="C.low">{{liveTime()}}</span></span>
+      <button (click)="triggerRetrain()" [disabled]="isRetraining()" class="nav-tab-btn"
+        [style.background]="isRetraining() ? C.ai + '20' : 'transparent'"
+        style="display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); padding: 4px 12px; border-radius: 6px;">
+        <span [style.color]="C.ai">⚙</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ isRetraining() ? 'RE-ENTRAINEMENT...' : 'RE-ENTRAINER
+          MODÈLE' }}</span>
+      </button>
       <div
         style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#667eea,#764ba2); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900;">
         A</div>
@@ -191,35 +198,17 @@
           </div>
         </div>
 
-        <!-- Charts row -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-          <div class="panel">
-            <div style="font-size: 13px; font-weight: 700; margin-bottom: 3px;">Distribution Horaire</div>
-            <div style="font-size: 10px; color: var(--muted); margin-bottom: 14px; font-family: var(--mono);">Alertes
-              toutes sources · aujourd'hui</div>
-            <div class="chart-container">
-              <div *ngFor="let d of hourData" class="chart-bar-wrapper">
-                <div class="chart-bar-area">
-                  <div class="chart-bar" [style.height]="(d.v / maxHourValue * 100) + '%'"></div>
-                </div>
-                <span style="font-size: 8px; color: var(--muted); font-family: var(--mono);">{{d.l}}</span>
-              </div>
-            </div>
-          </div>
-          <div class="panel">
-            <div style="font-size: 13px; font-weight: 700; margin-bottom: 3px;">Répartition par Source</div>
-            <div style="font-size: 10px; color: var(--muted); margin-bottom: 14px; font-family: var(--mono);">
-              Pourcentage du total alertes</div>
-            <div *ngFor="let s of sourceStats()" style="margin-bottom: 8px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                <span [style.color]="s.src.color" style="font-size: 11px;">{{s.src.icon}} {{s.src.label}}</span>
-                <span [style.color]="s.src.color"
-                  style="font-size: 11px; font-family: var(--mono); font-weight: 800;">{{s.count}}</span>
-              </div>
-              <div class="mini-bar-bg" style="height: 4px;">
-                <div class="mini-bar-fill" [style.width]="(s.count / (stats().total || 1) * 100) + '%'"
-                  [style.background]="s.src.color"></div>
-              </div>
+        <!-- Intelligence row -->
+        <div class="panel" style="grid-column: span 2;">
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px;">Intelligence — Répartition des Menaces
+            Apprises</div>
+          <div style="display: flex; gap: 20px; align-items: flex-end; height: 120px; padding: 10px 0;">
+            <div *ngFor="let t of threatTrend()"
+              style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <span style="font-size: 9px; color: var(--muted); font-family: var(--mono);">{{t.value}}</span>
+              <div [style.height]="(t.value / history().length * 100) + '%'" [style.background]="C.ai"
+                style="width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; opacity: 0.8;"></div>
+              <span style="font-size: 8px; color: var(--muted); text-transform: uppercase;">{{t.label}}</span>
             </div>
           </div>
         </div>
@@ -231,7 +220,8 @@
           <div class="panel-accent" [style.background]="'linear-gradient(90deg,' + C.ai + ',transparent)'"></div>
           <div
             style="font-size: 13px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 7px;">
-            <span [style.color]="C.ai">◈</span> Décision IA — {{selectedAlert() ? SOURCES[selectedAlert().source].label
+            <span [style.color]="C.ai">◈</span> Décision IA — {{selectedAlert() ? (selectedAlert().rule ||
+            SOURCES[selectedAlert().source].label)
             : "—"}}
           </div>
           <div *ngIf="selectedAlert(); else noAlert" style="display: flex; flex-direction: column; gap: 11px;">
@@ -267,34 +257,56 @@
             <div
               style="background: rgba(167,139,250,.06); border-radius: 8px; padding: 10px; border: 1px solid rgba(167,139,250,.15);">
               <div [style.color]="C.ai"
-                style="font-size: 9px; margin-bottom: 6px; font-family: var(--mono); letter-spacing: 1px;">RAISONNEMENT
-                IA</div>
+                style="font-size: 9px; margin-bottom: 6px; font-family: var(--mono); letter-spacing: 1px;">METRIQUES
+                ALERT</div>
               <div style="font-size: 10px; color: var(--muted); line-height: 1.8; font-family: var(--mono);">
-                › Source : <span
-                  [style.color]="SOURCES[selectedAlert().source].color">{{SOURCES[selectedAlert().source].label}}</span><br />
-                › Niveau : <span [style.color]="TL[selectedAlert().level].c">{{selectedAlert().level}}</span><br />
-                › Confiance : <span [style.color]="C.low">{{selectedAlert().confidence}}%</span><br />
-                › Règle : <span style="color: var(--text);">#{{selectedAlert().ruleId}}</span>
+                › Attaque : <span style="color: var(--text);">{{selectedAlert().attack_type}}</span><br />
+                › Tentatives : <span style="color: var(--text);">{{selectedAlert().failed_attempts}}</span><br />
+                › Score : <span
+                  [style.color]="TL[selectedAlert().level].c">{{selectedAlert().severity_score}}</span><br />
+                › Reputation : <span style="color: var(--text);">{{selectedAlert().ip_reputation}}</span>
               </div>
             </div>
-            <div *ngIf="selectedAlert().action" [style.background]="ACTIONS[selectedAlert().action].color + '12'"
-              [style.borderColor]="ACTIONS[selectedAlert().action].color + '30'"
-              style="border-radius: 8px; padding: 10px; border: 1px solid;">
-              <div [style.color]="ACTIONS[selectedAlert().action].color"
-                style="font-size: 9px; margin-bottom: 5px; font-family: var(--mono); letter-spacing: 1px;">⚡ ACTION
-                AUTOMATIQUE</div>
-              <span class="tag" [style.background]="ACTIONS[selectedAlert().action].color + '12'"
-                [style.color]="ACTIONS[selectedAlert().action].color"
-                [style.border]="'1px solid ' + ACTIONS[selectedAlert().action].color + '25'">
-                {{ACTIONS[selectedAlert().action].icon}} {{ACTIONS[selectedAlert().action].label}}
-              </span>
-              <div style="margin-top: 8px;" class="mini-bar-bg">
-                <div class="mini-bar-fill" [style.width]="selectedAlert().confidence + '%'"
-                  [style.background]="ACTIONS[selectedAlert().action].color" style="height: 4px;"></div>
+
+            <!-- ANALYZE BUTTON -->
+            <div *ngIf="activePage() === 'Alertes' || activePage() === 'Dashboard'" style="margin-top: 10px;">
+              <button *ngIf="!analysisResult()" (click)="analyzeAlert(selectedAlert())" [disabled]="isProcessing()"
+                style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(167,139,250,0.15); border: 1px solid #a78bfa; color: #a78bfa; font-weight: 800; font-size: 11px; cursor: pointer; transition: all 0.2s;">
+                {{ isProcessing() ? 'IA EN TRAIN D\'ANALYSER...' : '◈ LANCER ANALYSE IA' }}
+              </button>
+            </div>
+
+            <!-- RESULT -->
+            <div *ngIf="analysisResult() || selectedAlert().action_result"
+              [style.background]="(analysisResult()?.action === 'executed' ? C.low : C.high) + '12'"
+              [style.borderColor]="(analysisResult()?.action === 'executed' ? C.low : C.high) + '30'"
+              style="border-radius: 8px; padding: 12px; border: 1px solid; margin-top: 10px; animation: slideUp 0.3s ease-out;">
+              <div [style.color]="analysisResult()?.action === 'executed' ? C.low : C.high"
+                style="font-size: 9px; margin-bottom: 8px; font-family: var(--mono); letter-spacing: 1px;">
+                {{ analysisResult()?.action === 'executed' ? '⚡ ACTION AUTOMATIQUE' : '📡 ESCALADE REQUISE' }}
+              </div>
+
+              <div style="font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 8px;">
+                {{ (analysisResult()?.decision || selectedAlert().decision) | uppercase }}
+              </div>
+
+              <div
+                style="font-size: 10px; color: var(--muted); line-height: 1.6; font-style: italic; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border-left: 2px solid #a78bfa;">
+                "{{ analysisResult()?.explanation || selectedAlert().explanation }}"
+              </div>
+
+              <div style="margin-top: 10px;" class="mini-bar-bg">
+                <div class="mini-bar-fill"
+                  [style.width]="(analysisResult()?.confidence * 100 || selectedAlert().confidence) + '%'"
+                  [style.background]="analysisResult()?.action === 'executed' ? C.low : C.high" style="height: 4px;">
+                </div>
               </div>
               <div
-                style="font-size: 9px; color: var(--muted); margin-top: 3px; font-family: var(--mono); text-align: right;">
-                Confiance {{selectedAlert().confidence}}%</div>
+                style="font-size: 9px; color: var(--muted); margin-top: 5px; font-family: var(--mono); display: flex; justify-content: space-between;">
+                <span>SENTINEL ENGINE</span>
+                <span>Confiance {{ ((analysisResult()?.confidence * 100) || selectedAlert().confidence) | number:'1.0-1'
+                  }}%</span>
+              </div>
             </div>
           </div>
           <ng-template #noAlert>
@@ -457,6 +469,51 @@
                 <div class="mini-bar-fill" [style.width]="a.mem + '%'"
                   [style.background]="a.mem > 80 ? C.critical : a.mem > 60 ? C.medium : C.low"></div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- HISTOIRE PAGE -->
+  <ng-container *ngIf="activePage() === 'Histoire'">
+    <div style="padding: 18px 28px; display: flex; flex-direction: column; gap: 18px;">
+      <div class="panel">
+        <div
+          style="font-size: 14px; font-weight: 800; margin-bottom: 15px; display: flex; gap: 8px; align-items: center;">
+          <span [style.color]="C.ai">📜</span> Historique des Décisions IA
+        </div>
+        <div
+          style="display: grid; grid-template-columns: 120px 1fr 100px 100px 120px; gap: 8px; padding: 5px 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px;">
+          <div *ngFor="let h of ['Attaque', 'Explication IA', 'Décision', 'Action', 'Confiance']"
+            style="font-size: 9px; color: var(--muted); font-family: var(--mono); letter-spacing: 1.2px; text-transform: uppercase;">
+            {{h}}</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; max-height: 600px; overflow-y: auto;">
+          <div *ngFor="let h of history()" class="alert-row" (click)="selectAlert(h)"
+            style="grid-template-columns: 120px 1fr 100px 100px 120px; padding: 12px 10px;">
+            <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text);">
+              {{ h.attack_type }}
+            </span>
+            <div style="font-size: 11px; color: var(--muted); line-height: 1.4; padding-right: 15px;">
+              {{ h.explanation }}
+            </div>
+            <span class="badge" [style.color]="h.decision === 'block_ip' ? C.critical : C.low"
+              style="background: rgba(0,0,0,0.2);">
+              {{ h.decision }}
+            </span>
+            <span class="tag" [style.background]="h.action === 'executed' ? C.low + '15' : C.high + '15'"
+              [style.color]="h.action === 'executed' ? C.low : C.high"
+              [style.border]="'1px solid ' + (h.action === 'executed' ? C.low : C.high) + '30'">
+              {{ h.action === 'executed' ? 'SUCCESS' : 'ESCALATED' }}
+            </span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="mini-bar-bg" style="flex: 1; height: 4px;">
+                <div class="mini-bar-fill" [style.width]="(h.confidence * 100) + '%'" [style.background]="C.ai"></div>
+              </div>
+              <span style="font-size: 10px; font-family: var(--mono);">{{ (h.confidence * 100) | number:'1.1-1'
+                }}%</span>
             </div>
           </div>
         </div>

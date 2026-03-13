@@ -1,6 +1,7 @@
-import { Component, signal, effect, computed } from '@angular/core';
+import { Component, signal, effect, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ApiService } from '../../core/api.service';
 
 // --- DESIGN TOKENS ---
 interface DesignTokens {
@@ -49,15 +50,6 @@ const ACTIONS: any = {
   SCAN: { icon: '🔬', label: 'Scan Lancé', color: '#667eea' },
 };
 
-const ALERT_POOL = [
-  { source: 'WAZUH', rule: 'Brute Force SSH', agent: 'srv-prod-01', ip: '185.220.101.45', level: 'CRITICAL', ruleId: 'W-5763', action: 'BLOCK_IP', confidence: 97, tactic: 'Initial Access', technique: 'T1110.001', desc: '10 tentatives SSH échouées en 30s depuis IP externe.' },
-  { source: 'WAZUH', rule: 'Escalade de Privilèges', agent: 'ws-finance-03', ip: '10.0.0.54', level: 'HIGH', ruleId: 'W-5501', action: 'DISABLE_USER', confidence: 91, tactic: 'Privilege Escalation', technique: 'T1548', desc: 'Tentative sudo par utilisateur non autorisé.' },
-  { source: 'WAZUH', rule: 'Connexion Root Suspecte', agent: 'srv-db-01', ip: '45.33.32.156', level: 'CRITICAL', ruleId: 'W-5402', action: 'ISOLATE', confidence: 99, tactic: 'Lateral Movement', technique: 'T1021', desc: 'Connexion root directe hors horaires autorisés.' },
-  { source: 'ANTIVIRUS', rule: 'Emotet Trojan Détecté', agent: 'ws-rh-07', ip: '10.0.0.87', level: 'CRITICAL', ruleId: 'AV-9981', action: 'QUARANTINE', confidence: 99, tactic: 'Execution', technique: 'T1059', desc: 'Signature Emotet trojan dans C:\\Temp\\update.exe.' },
-  { source: 'NODEJS', rule: 'API Rate Limit Dépassée', agent: 'api-gateway', ip: '91.108.56.23', level: 'HIGH', ruleId: 'N-3301', action: 'BLOCK_IP', confidence: 89, tactic: 'Initial Access', technique: 'T1190', desc: '5000 req/min sur /api/auth depuis une IP unique.' },
-  { source: 'UPDATES', rule: 'CVE-2024-3094 Critique', agent: 'srv-prod-01', ip: '10.0.0.10', level: 'CRITICAL', ruleId: 'U-CVE01', action: 'PATCH_APPLY', confidence: 100, tactic: 'Exploitation', technique: 'T1190', desc: 'XZ Utils backdoor CVE-2024-3094. Patch immédiat requis.' },
-];
-
 const AGENTS_DATA = [
   { id: 'WZ-001', name: 'srv-prod-01', ip: '10.0.0.10', os: 'Ubuntu 22.04', status: 'warning', threats: 3, cpu: 71, mem: 67, uptime: '47j 3h', sources: ['WAZUH', 'ANTIVIRUS', 'UPDATES'] },
   { id: 'WZ-002', name: 'srv-web-02', ip: '10.0.0.11', os: 'CentOS 8', status: 'online', threats: 1, cpu: 22, mem: 41, uptime: '12j 8h', sources: ['WAZUH', 'UPDATES'] },
@@ -74,7 +66,7 @@ const AGENTS_DATA = [
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
-export class Dashboard {
+export class Dashboard implements OnInit {
   C = DESIGN_TOKENS;
   SOURCES = SOURCES;
   TL = TL;
@@ -84,8 +76,14 @@ export class Dashboard {
   activePage = signal('Dashboard');
   liveTime = signal(this.getCurrentTime());
   alerts = signal<any[]>([]);
+  history = signal<any[]>([]);
   selectedAlert = signal<any>(null);
   agents = signal(AGENTS_DATA);
+
+  // Analysis state
+  isProcessing = signal(false);
+  isRetraining = signal(false);
+  analysisResult = signal<any>(null);
 
   // Filters
   alertSearch = signal('');
@@ -94,42 +92,53 @@ export class Dashboard {
   filterStatus = signal('ALL');
 
   // Dashboard Tabs
-  tabs = ['Dashboard', 'Alertes', 'Agents', 'Actions', 'Rapports'];
+  tabs = ['Dashboard', 'Alertes', 'Agents', 'Histoire', 'Actions', 'Rapports'];
+
+  // Trend Data (Computed from history)
+  threatTrend = computed(() => {
+    const list = this.history();
+    const counts: Record<string, number> = {};
+    list.forEach(a => {
+      counts[a.attack_type] = (counts[a.attack_type] || 0) + 1;
+    });
+    return Object.entries(counts).map(([label, value]) => ({ label, value }));
+  });
 
   // Dashboard stats
   stats = computed(() => {
     const list = this.alerts();
+    const hist = this.history();
     return {
-      total: list.length,
-      critical: list.filter(a => a.level === 'CRITICAL').length,
-      resolved: list.filter(a => a.status === 'resolved').length,
-      blocked: list.filter(a => a.action === 'BLOCK_IP').length,
-      patches: list.filter(a => a.action === 'PATCH_APPLY').length,
+      total: list.length + hist.length,
+      critical: list.filter(a => a.level === 'CRITICAL').length + hist.filter(a => a.severity_score > 0.8).length,
+      resolved: hist.length,
+      blocked: hist.filter(a => a.decision === 'block_ip').length,
+      patches: hist.filter(a => a.action === 'PATCH_APPLY').length,
       agents: this.agents().filter(a => a.status === 'online').length
     };
   });
 
   // Source stats
   sourceStats = computed(() => {
-    const list = this.alerts();
+    const list = [...this.alerts(), ...this.history()];
     return Object.keys(SOURCES).map(sk => ({
       src: SOURCES[sk],
-      count: list.filter(a => a.source === sk).length,
-      crit: list.filter(a => a.source === sk && a.level === 'CRITICAL').length
+      count: list.filter(a => a.source === sk || a.attack_type === sk).length,
+      crit: list.filter(a => (a.source === sk || a.attack_type === sk) && (a.level === 'CRITICAL' || a.severity_score > 0.8)).length
     }));
   });
 
   // Filtered alerts
   filteredAlerts = computed(() => {
-    let list = this.alerts();
+    let list = this.activePage() === 'Histoire' ? this.history() : this.alerts();
     const search = this.alertSearch().toLowerCase();
     const source = this.filterSource();
     const level = this.filterLevel();
     const status = this.filterStatus();
 
     return list.filter(a => {
-      const matchSearch = !search || [a.rule, a.ip, a.agent, a.ruleId].join(' ').toLowerCase().includes(search);
-      const matchSource = source === 'ALL' || a.source === source;
+      const matchSearch = !search || [a.rule, a.ip, a.agent, a.ruleId, a.attack_type].join(' ').toLowerCase().includes(search);
+      const matchSource = source === 'ALL' || a.source === source || a.attack_type === source;
       const matchLevel = level === 'ALL' || a.level === level;
       const matchStatus = status === 'ALL' || a.status === status;
       return matchSearch && matchSource && matchLevel && matchStatus;
@@ -142,38 +151,84 @@ export class Dashboard {
   ];
   maxHourValue = Math.max(...this.hourData.map(d => d.v));
 
-  constructor() {
+  constructor(private apiService: ApiService) {
     // Current time updater
     setInterval(() => this.liveTime.set(this.getCurrentTime()), 1000);
+    // Data auto-refresh every 5 seconds
+    setInterval(() => this.refreshData(), 5000);
+  }
 
-    // Initial data
-    const initialAlerts = ALERT_POOL.map((a, i) => ({
-      ...a,
-      id: 100 + i,
-      time: '14:20:00',
-      status: 'resolved'
-    }));
-    this.alerts.set(initialAlerts);
-    this.selectedAlert.set(initialAlerts[0]);
+  ngOnInit(): void {
+    this.refreshData();
+  }
 
-    // Live alert simulator
-    let uid = 200;
-    setInterval(() => {
-      const randomBaseAlert = ALERT_POOL[Math.floor(Math.random() * ALERT_POOL.length)];
-      const newAlert = {
-        ...randomBaseAlert,
-        id: uid++,
-        time: this.getCurrentTime(),
-        status: 'analyzing',
-        isNew: true
-      };
-      this.alerts.update(prev => [newAlert, ...prev.slice(0, 24)]);
+  refreshData() {
+    this.apiService.getAlerts().subscribe(data => {
+      const initialAlerts = data.map((a, i) => ({
+        ...a,
+        id: 100 + i,
+        time: '14:22:00',
+        status: 'pending',
+        level: a.severity_score > 0.8 ? 'CRITICAL' : a.severity_score > 0.5 ? 'HIGH' : 'MEDIUM',
+        rule: a.attack_type.replace(/_/g, ' ').toUpperCase(),
+        source: 'WAZUH',
+        agent: 'srv-prod-0' + (i % 5 + 1),
+        ip: '192.168.1.' + (100 + i),
+        ruleId: 'SIG-' + (1000 + i),
+        desc: `Detection of ${a.attack_type} activity with ${a.failed_attempts} failed attempts and severity ${a.severity_score}.`
+      }));
+      this.alerts.set(initialAlerts);
+      if (initialAlerts.length > 0 && !this.selectedAlert()) {
+        this.selectedAlert.set(initialAlerts[0]);
+      }
+    });
 
-      // Auto-resolve after 3s
-      setTimeout(() => {
-        this.alerts.update(prev => prev.map(a => a.id === newAlert.id ? { ...a, status: 'resolved', isNew: false } : a));
-      }, 3000);
-    }, 8000);
+    this.apiService.getHistory().subscribe(data => {
+      this.history.set(data.reverse()); // Show latest first
+    });
+  }
+
+  analyzeAlert(alert: any) {
+    this.isProcessing.set(true);
+    this.analysisResult.set(null);
+
+    // Prepare data for backend
+    const payload = {
+      attack_type: alert.attack_type || 'unknown',
+      failed_attempts: alert.failed_attempts || 0,
+      severity_score: alert.severity_score || 0,
+      ip_reputation: alert.ip_reputation || 0,
+      previous_incidents: alert.previous_incidents || 0
+    };
+
+    this.apiService.processAlert(payload).subscribe({
+      next: (res) => {
+        this.analysisResult.set(res);
+        this.isProcessing.set(false);
+        this.refreshData();
+      },
+      error: (err) => {
+        console.error(err);
+        this.isProcessing.set(false);
+      }
+    });
+  }
+
+  triggerRetrain() {
+    this.isRetraining.set(true);
+    this.apiService.retrain().subscribe({
+      next: (res) => {
+        console.log('Retrain result:', res);
+        setTimeout(() => {
+          this.isRetraining.set(false);
+          this.refreshData();
+        }, 1500); // Visual feedback delay
+      },
+      error: (err) => {
+        console.error(err);
+        this.isRetraining.set(false);
+      }
+    });
   }
 
   private getCurrentTime(): string {
