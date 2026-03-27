@@ -1,0 +1,32 @@
+attack_type,failed_attempts,severity_score,ip_reputation,previous_incidents,decision,confidence,action,explanation
+brute_force,30,0.9,0.8,2,block_ip,0.85,executed,Random Forest automatically block_ip with 85.0% confidence. Reason: ok
+malware,1,0.92,0.71,3,block_ip,0.86,executed,Random Forest automatically block_ip with 86.0% confidence. Reason: ok
+malware,1,0.95,0.27,0,escalate,0.58,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+malware,1,0.64,0.57,1,escalate,0.96,executed,Random Forest automatically escalate with 96.0% confidence. Reason: ok
+malware,1,0.72,0.46,3,escalate,0.63,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+scan,6,0.57,0.76,3,block_ip,0.53,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+malware,1,0.82,0.82,2,block_ip,0.81,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+scan,10,0.48,0.8,1,escalate,0.66,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+brute_force,10,0.9,0.77,0,block_ip,0.56,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+brute_force,22,0.9,0.13,0,escalate,0.45,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+brute_force,25,0.9,0.15,1,escalate,0.47,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+brute_force,45,0.95,0.9,2,block_ip,0.96,executed,Random Forest automatically block_ip with 96.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,0.97,executed,Random Forest automatically block_ip with 97.0% confidence. Reason: ok
+malware,1,0.65,0.4,0,escalate,0.99,executed,Random Forest automatically escalate with 99.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,0.97,executed,Random Forest automatically block_ip with 97.0% confidence. Reason: ok
+malware,1,0.65,0.4,0,escalate,0.99,executed,Random Forest automatically escalate with 99.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,0.97,executed,Random Forest automatically block_ip with 97.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,0.97,executed,Random Forest automatically block_ip with 97.0% confidence. Reason: ok
+scan,3,0.2,0.1,0,ignore,0.65,escalated,LLM Service Unavailable. Escalating as a safety precaution.
+brute_force,30,0.9,0.8,2,block_ip,1.0,executed,Random Forest automatically block_ip with 100.0% confidence. Reason: ok
+brute_force,45,0.95,0.9,2,block_ip,0.99,executed,Random Forest automatically block_ip with 99.0% confidence. Reason: ok
+brute_force,45,0.95,0.9,2,block_ip,0.99,executed,Random Forest automatically block_ip with 99.0% confidence. Reason: ok
+brute_force,45,0.95,0.9,2,block_ip,0.99,executed,Random Forest automatically block_ip with 99.0% confidence. Reason: ok
+brute_force,45,0.95,0.9,2,block_ip,0.99,executed,Random Forest automatically block_ip with 99.0% confidence. Reason: ok
+brute_force,45,0.95,0.9,2,block_ip,0.99,executed,Random Forest automatically block_ip with 99.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,1.0,executed,Random Forest automatically block_ip with 100.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,1.0,executed,Random Forest automatically block_ip with 100.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,1.0,executed,Random Forest automatically block_ip with 100.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,1.0,executed,Random Forest automatically block_ip with 100.0% confidence. Reason: ok
+brute_force,30,0.9,0.8,2,block_ip,1.0,executed,Random Forest automatically block_ip with 100.0% confidence. Reason: ok
+brute_force,50,0.95,0.9,3,192.168.1.100,block_ip,0.99,executed,Random Forest automatically block_ip with 99.0% confidence. Reason: ok. Remediation: executed: sudo ufw deny from 192.168.1.100 | stdout: Rules updated
